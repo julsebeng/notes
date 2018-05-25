@@ -234,3 +234,16 @@ doc/**/*.o
           performed. 
         - Merge conflicts will arise when the two branch snapshots have files that both have modified; Git cannot resolve this cleanly
           and will leave it up to you to fix the issues before finalizing the merge commit.
+            - When this happens, Git will automatically put conflict-resolution markers in your files:
+            ```
+            <<<<<<< HEAD
+            foo
+            =======
+            bar
+            >>>>>>> TargetBranch
+            ```
+            The lines between `<<<<<<< HEAD` and `=======` are changes present in the current branch, while the lines between
+            `=======` and `>>>>>>>` are the changes present in the target branch that is trying to be merged in. You can then go through
+            and resolve each conflict manually, removing the markers in the process.
+
+            - Once these conflicts are resolved, they can be staged with `git add` and committed.
