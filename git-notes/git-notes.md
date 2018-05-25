@@ -22,6 +22,10 @@ Sources:
 ### [Git Branching](#git-branching)
 - [Branches in a Nutshell](#branches-in-a-nutshell)
 - [Basic Branching and Merging](#basic-branching-and-merging)
+- [Branch Management](#branch-management)
+- [Branching Workflows](#branching-workflows)
+- [Remote Branches](#remote-branches)
+- [Rebasing(#rebasing)
 
 ## Getting Started
 ### Version Control
@@ -247,3 +251,57 @@ doc/**/*.o
             and resolve each conflict manually, removing the markers in the process.
 
             - Once these conflicts are resolved, they can be staged with `git add` and committed.
+### Branch Management
+- `git branch` with no arguments will list of all current branches.
+  - The "*" will indicate which branch is currently checked out (AKA where HEAD is pointing).
+- `git branch -v` will show the most recent commit made to each branch.
+- The `--merged` and `--not-merged` flags will filter out branches you have or have not merged into your current branch, respectively.
+  - Typically, branches that are filtered in with `--merged` are generally safe to delete, because their work has been merged into another
+    branch already.
+    - If you attempt to delete a branch that has not been merged into another, Git will say that the branch has not been fully merged, 
+      and will not delete the branch (deletion can be forced with the `-D` flag).
+### Branching Workflows
+- Long-running branches: a typical workflow within Git has stable code residing on some master branch, while new features/releases may be 
+  separate long-lived branches that are never deleted; ideally, the older commits contain more stable code, while the newer ones contain 
+  potentially more volatile changes.
+- Topic branches: a short-lived branch that is used for a particular task or fix. Since branches cost almost nothing to create and 
+  destroy, there's no real overhead in branching for even small changes.
+### Remote Branches
+- Remote references are references/pointers that are stored in your remote repos - branches, tags, etc.
+  - Can be displayed with `git ls-remote <remote>` or `git remote show <remote>`.
+- More commonly, remote-tracking branches are used to keep tabs on the remote repo state, which are updated every time a connection is 
+  made to the remote repo.
+    - These branches cannot be moved locally, and are represented as `<remote>/<branch>`.
+    - When a remote repo is cloned, for example, that remote is automatically named `origin`, its master branch is cloned into the local
+      repo, and creates a pointer named `origin/master` to where the remote master branch HEAD is; another branch is created, simply 
+      called `master`, and points it to the same commit. __These are two distinct branches.__
+- `git fetch <remote>` will update the remote-tracking branches in the local repo.
+- Local branches must be explicitly pushed to a remote to synchronize them. You can do this via `git push <remote> <branch>`.
+  - By doing so, anyone else who connects to the remote from that point forward will also receive a remote-tracking branch for your 
+    branch.
+    - Note that __having a remote-tracking branch does not necessarily mean you've pulled local copies of that branch's files.__
+- Remote-tracking branches can be merged into your current branch by using their qualified names: `git merge origin/somebranch`.
+- Tracking branches are created when a remote branch is checked out in a local repository; these branches automatically track a remote
+  that is referred to as its _upstream branch_.
+  - Tracking branches can be explicitly created by checking out a remote branch: `git checkout -b somebranch origin/somebranch`; the 
+  `--track` flag does this as well: `git --track origin/somebranch`.
+    - Additionally, Git will immplicitly create a tracking branch if you attempt to checkout a branch that (a) doesn't exist locally and
+      (b) maches the exact name of a remote branch in only one remote.
+    - A tracking branch can have a different local branch name than its upstream branch; the 
+      syntax `git checkout -b localbranch origin/somebranch` is perfectly valid.
+  - Using `git pull` on a tracking branch without specifying remote and branch is okay, because the branch implicitly knows what its
+    upstream branch is.
+  - `git branch -vv` will list any tracking branches in the project, as well as their remote upstream branch.
+  - To delete a remote branch, use `git push --delete somebranch`.
+### Rebasing
+- Rebasing provides a similar function to merge, but is not exactly the same.
+  - A merge takes two recent branch snapshots, their most recent common ancestor, and performs a three-way merge resulting in a new 
+    snapshot.
+  - Rebasing takes all of the changes that were performed on the current branch and replays them on top of another:
+    `git rebase <target branch>`.
+- The rebasing process is as follows:
+  1. Git goes to the most recent common ancestor of the two snapshots.
+  2. For each commit created between that ancestor and the current snapshot (the one being rebased), the diff is acquired and saved to a
+     temporary file.
+  3. The current branch is reset to the same commit as the target branch.
+  4. The diffs are applied to that branch one at a time.
