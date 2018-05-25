@@ -1,5 +1,6 @@
 # Git Notes
-[The Git Book](https://git-scm.com/book/en/v2)
+Sources: 
+- [The Git Book](https://git-scm.com/book/en/v2)
 
 # Table of Contents
 ### [Getting Started](#getting-started)
@@ -19,6 +20,8 @@
 - [Git Aliases](#git-aliases)
 
 ### [Git Branching](#git-branching)
+- [Branches in a Nutshell](#branches-in-a-nutshell)
+- [Basic Branching and Merging](#basic-branching-and-merging)
 
 ## Getting Started
 ### Version Control
@@ -66,6 +69,7 @@
 - You can either take an existing directory and turn it into a Git repo, or clone an existing one.
     - Initializing a directory: navigate to the directory and run `git init`. This creates a .git directory with the skeleton of a basic
       repository. 
+        - The default branch, _master_, is created as part of this process.
         - At this point, none of the files will be tracked; an initial commit should be made to add them to the database.
     - Cloning: to copy the entirety of an existing repo (which is normal for Git), use `git clone <url or filepath>`.
         - Optionally, a target directory can be specified, i.e. `git clone www.somerepo.com/foo local-dir`.
@@ -146,6 +150,7 @@ doc/**/*.o
     - `--since` and `--until` both take date formats and limit the output based on them. `--since=2.weeks`, `--until=2008-1-1`, etc are
       some of the valid options.
     - The `-S <string>` flag finds commits that added or removed occurances of said string and displays only those.
+    - The `--decorate` flag will show what commit branches are currently pointing to.
     - A path can be passed to log command as well, which will only show changes made to that specific file or files within that directory.
 ### Undoing Things
 - If you commit files to early, and there are additional changes that you would like to include in your commit, stage those files and 
@@ -193,3 +198,39 @@ doc/**/*.o
 - External commands can be run as well, by using "!": `git config --global alias.visual '!gitk'`.
 
 ## Git Branching
+### Branches in a Nutshell
+- Git stores its data as a series of snapshots; specifically, commits are stored as commit objects, which contain a pointer to the 
+  snapshot containing the content that was staged, as well as author information, commit message, and pointer(s) to parent commit(s).
+    - It's possible for a commit to have 0 parents (initial commit), 1 parent (normal commit), or many parents (when two or more 
+      branches are merged).
+- Several objects are created as changes are staged and committed:
+    - When a change is staged, Git computes a checksum for each committed file, adds that checksum to the staging area, and stores that 
+      version of the file in the repository (as what's known as a _blob_).
+    - When a commit is created, Git calculates a checksum for each directory, and stores those tree objects in the repository. These 
+      tree objects contain the checksums of each file/subdirectory blob contained within it.
+    - A commit object is created, which contains the author, date, commit message, and a pointer to the root tree blob that was
+      previously created.
+        - A commit object will also include a pointer to the previous commit, if there is one.
+- A branch is nothing more than a pointer to one of these commit objects.
+    - When a new branch is created, a new pointer to the current commit is created.
+        - Git tracks the commit you're currently on via the HEAD pointer. __This is a pointer exactly like branch pointers, but it always
+          points to the current commit.__
+        - The location of each branch can be printed with `git log --decorate`.
+- A branch can be created with `git branch <branch name>`; this branch is not switched to automatically.
+    - On disk this is nothing more than the 40 character SHA-1 hash of the commit that the branch points to (typically the most recent
+      commit in the branch).
+- Delete a branch with `git branch -d <branch to delete>`.
+- Use `git checkout <branch name>` to change the currently active branch.
+### Basic Branching and Merging
+- Use `git merge <branch to merge into current>` to merge changes from one branch to another.
+    - If the target branch is directly ahead of the current branch in terms of commit history (AKA there were no divergent changes and
+      the current branch can be directly traced to in the commit history), a fast-forward will occur.
+        - A fast-forward simply takes the current branch pointer and sets it equal to the target branch pointer, because there is no
+          divergent work that needs to be resolved.
+    - If the target branch is _not_ a direct ancestor of the current branch, a simple fast-forward won't work. Instead, Git merges the 
+      branches together, using the snapshot to merge into (the current branch), the snapshot to merge in (the target branch), and the
+      most recent common ancestor that the two share.
+        - Because this is more complex than a fast-forward, Git will create a new commit and automatically push it when a merge is 
+          performed. 
+        - Merge conflicts will arise when the two branch snapshots have files that both have modified; Git cannot resolve this cleanly
+          and will leave it up to you to fix the issues before finalizing the merge commit.
