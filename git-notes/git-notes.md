@@ -25,7 +25,17 @@ Sources:
 - [Branch Management](#branch-management)
 - [Branching Workflows](#branching-workflows)
 - [Remote Branches](#remote-branches)
-- [Rebasing(#rebasing)
+- [Rebasing](#rebasing)
+
+### [Git on the Server](#git-on-the-server)
+- [The Protocols](#the-protocols)
+- [Getting Git on a Server](#getting-git-on-a-server)
+- [Generating Your SSH Keys](#generating-your-ssh-keys)
+- [Setting Up the Server](#setting-up-the-server)
+- [Git Daemon](#git-daemon)
+- [Smart HTTP](#smart-http)
+- [GitWeb](#gitweb)
+- [GitLab](#gitlab)
 
 ## Getting Started
 ### Version Control
@@ -299,9 +309,131 @@ doc/**/*.o
     snapshot.
   - Rebasing takes all of the changes that were performed on the current branch and replays them on top of another:
     `git rebase <target branch>`.
+- The rebasing workflow works as follows:
+  1. Check out the branch whose commits you want to replay.
+  2. `git rebase <target branch>`, where the target branch is the branch that you want the commits to be replayed on top of.
+  3. Check out the target branch and perform a fast-forward merge with `git merge <source branch>`, where the source branch is the name
+     of the branch that was checked out in step 1.
+      - Note that this works because the source branch moves to a new location ahead of the target branch as part of the rebase process.
+  - Alternatively, the syntax `git rebase <target branch> <source branch>` can be used, which will perform the checkouts automatically
+    (but not the fast-forward merge).
 - The rebasing process is as follows:
   1. Git goes to the most recent common ancestor of the two snapshots.
   2. For each commit created between that ancestor and the current snapshot (the one being rebased), the diff is acquired and saved to a
      temporary file.
   3. The current branch is reset to the same commit as the target branch.
   4. The diffs are applied to that branch one at a time.
+- The results of a rebase are the same as those of a merge, except the history comes out cleaner.
+  - Since the commits of one branch are played on top of another, the resulting log of a rebase looks linear, as if all the changes
+    were made on that branch since the beginning.
+- Rebases onto branches that the current branch did not directly branch off of are possible as well, with the `--onto` flag.
+  - Syntax: `git rebase --onto <target branch> <ancestor branch> <source branch>`, where
+    - `target branch` is the branch to play the rebase commits on,
+    - `ancestor branch` is how far back to go in the source branch patch history; it says, "figure out what commits were made since
+      `source branch` branched off of `ancestor branch` and play those on top of `target branch`,"
+    - `source branch` is the branch whose commits are being played on top of `target branch`.
+- Rebasing comes with inherent dangers: **do not rebase commits that exist outside of your local repository, i.e. ones that exist on
+  remotes as well**.
+  - Since rebased commits are considered to be entirely new commits, rebasing a branch that was, for example, previously just a merge
+    on a remote branch, will create duplicate merges on a local branch that pulls before and after the rebase.
+  - The rebase is essentially **overwriting the work that your current code may be based on**.
+
+## Git on the Server
+
+### The Protocols
+- A remote repository is typically a *bare repository* - it has no working directory, i.e. there is no snapshot that is checked out.
+  - It is essentially just the contents of the `.git` folder.
+- There are four distinct protocols that Git can use to transfer data.
+  - **Local**: the remote repository is simply another directory on the same filesystem; this could be a shared drive directory, for 
+    example. This can be fast or slow depending on how the remote project can be accessed, and every user can touch the remote project
+    via a shell (which can be unsafe).
+    - This protocol can be specified in two ways: `git clone /path/to/project.git` or `git clone file:///path/to/project.git`; **they are
+      not equivalent**.
+      - `/path/to/project.git` causes Git to try and use hardlinks and/or directly copy the files it needs to create the local repo. This
+        tends to be more efficient. This method is typically fine to use in most cases.
+      - `file:///` performs the tasks it would normally perform if it was fetching the information over a network protocol. This is less
+        efficient but prevents extraneous references from being included; see the [Git Internals](#git-internals) section for more 
+        information.
+    -  Local "remotes" can be added as so: `git remote add <remote name> /path/to/remote.git`.
+  - **HTTP**: there are two ways that Git can communicate over HTTP (as of Git version 1.6.6).
+    - *Smart HTTP* operates like the SSH protocol and has many features, such as being able to use various HTTP authentication mechanisms,
+      and being able to pull and push over HTTPS. This protocol is read/write.
+    - *Dumb HTTP* is far more simple, and the files of the remote repo will be served up like normal files from a web server. There
+      is no Git-specific code that runs server-side when this protocol is used. This protocol is read-only.
+  - **SSH**: this protocol is specified as `git clone ssh://[user@]server/path.git`, or `git clone [user@]server:path.git`.
+    - If a user isn't specified, Git will use the username of the account currently logged in.
+    - The SSH protocol is efficient, unlike the dumb HTTP protocol.
+    - The biggest difference with using the SSH protocol is that it doesn't support anonymous access to the server; everyone who pushes
+      and pulls must have their keys set up to be able to access it.
+  -**Git Protocol**: this is a special daemon that comes with Git that listens on a dedicated port (9418 by default).
+    - This protocol provides no means of authentication, so anyone can clone the repo without supplying credientials. Because of this,
+      these repos are typically read-only.
+    - Provides SSH-like speed but without the overhead of encryption and authentication. 
+### Getting Git on a Server
+- A remote can be created from a local repo as such: `git clone --bare some_project some_project.git`.
+  - The `--bare` flag specifies that only the Git data should be copied over.
+  - By convention, remote Git directories end in `.git`.
+  - This is roughly equivalent to running `c -Rf some_project/.git some_project.git` (*not that you should create your remotes this way!*)
+- Once a bare repo is created, it needs to be put on the server and have the proper protocols set up. 
+  - Setting up SSH: all that needs to be done is to copy the bare repo over to a location in which the current account has access to;
+    from there it can be cloned via `git clone [user@]my.server.com:/path/to/project.git`.
+    - Note that, in order for a user to be able to clone the repo, they must have read access to this directory, and to push they must
+      have write access.
+      - Running `git init --bare --shared` in the bare remote directory will add the proper group permissions to the directory  
+        automatically.
+### Generating Your SSH Keys
+- The SSH keys that a remote Git repo accepts are simply the users that are allowed to SSH onto the server; that is, their public key is
+  stored in the `~/.ssh/authorized_keys` files (or through some similar mechanism).
+### Setting Up the Server
+1. Create a `git` user, and a `.ssh` directory in that user's home directory (if it doesn't already exist).
+2. Add any authorized contributor's public key to the `authorized_keys` file in the `git` user's `ssh` directory.
+3. Create the bare repository wherever you like.
+4. Now developer's can add that repo to their remotes and push their project upstream. 
+- The `git` user's actions can be restricted by making their login shell the `git-shell`, which comes packaged with Git:
+  `sudo chsh git -s $(which git-shell)`.
+    - This prevents users from SSHing onto the server as the `git` user; the only actions it's able to perform are pushes and pulls.
+### Git Daemon
+- The Git Daemon is necessary to allow usage of the Git Protocol.
+- The command to launch the daemon is: `git daemon --reuseaddr --base-path=/path/to/repo /path/to/repo`.
+  - The `--reuseaddr` flag allows the server to reastart without waiting for old connections to time out. 
+  - The `--base-path` allows users to clone projejcts without having to specify the entire path.
+  - The `path/to/repo` specified at the end tells the Git daemon where to look for repositories to export.
+  - **This command must be run in a daemonized fashion**. `systemd` is a common way that Unix systems daemonize tasks.
+    - To launch this task as a daemon, place a file at `/etc/systemd/system/git-daemon.service` with the contents:
+    ```bash
+    [Unit]
+    Description=Start Git Daemon
+
+    [Service]
+    #Change to suit your needs
+    # Note: the Git binary may not be located at /user/bin/git
+    ExecStart=/usr/bin/git daemon --reuseaddr --base-path=/srv/git/ /srv/git/ 
+
+    Restart=always
+    RestartSec=500ms
+
+    StandardOutput=syslog
+    StandardError=syslog
+    SyslogIdentifier=git-daemon
+
+    # Modify these based on the user and group used to access the repos.
+    User=git
+    Group=git
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+    - **Note: don't forget that the port 9418 must be opened as well!**
+### Smart HTTP
+- Enabling HTTP access is basically just enabling a CGI script provided with Git, called `git-http-backend`.
+  - This script will read the path and headers of HTTP requests sent by pushes and pulls and determine if the remote server is 
+    capable of communicating over HTTP, as well as supporting Smart HTTP functionality if it's available.
+- There is a whole tutorial on setting up Git with Apache [here](https://git-scm.com/book/en/v2/Git-on-the-Server-Smart-HTTP).
+### GitWeb
+- GitWeb is a barebones web visualizer CGI script for Git that comes prepackaged. 
+- To get a temporary preview of what the visualizer looks like, it can be booted up via `git instaweb --httpd=<web server>`.
+  - Web server can be any lightweight web server that's installed on the system, such as `lighttpd`, `webrick`, etc.
+  - This launches an instance of the web view on port 1234.
+  - The visualizer can be stopped with `git instaweb --httpd=<web server> --stop`.
+- For setting up a more permanent GitWeb view, read [this](https://git-scm.com/book/en/v2/Git-on-the-Server-GitWeb).
+### GitLab
