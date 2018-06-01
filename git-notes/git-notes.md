@@ -1,6 +1,7 @@
 # Git Notes
 Sources: 
 - [The Git Book](https://git-scm.com/book/en/v2)
+- [Official Git Repo Documentation](https://github.com/git/git/blob/master/Documentation/SubmittingPatches)
 
 # Table of Contents
 ### [Getting Started](#getting-started)
@@ -36,6 +37,13 @@ Sources:
 - [Smart HTTP](#smart-http)
 - [GitWeb](#gitweb)
 - [GitLab](#gitlab)
+
+### [Distributed Git](#distributed-git)
+- [Distributed Workflows](#distributed-workflows)
+- [Contributing to a Project](#contributing-to-a-project)
+
+### [Git Tools](#git-tools)
+- [Revision Selection](#revision-selection)
 
 ## Getting Started
 ### Version Control
@@ -166,6 +174,7 @@ doc/**/*.o
     - The `-S <string>` flag finds commits that added or removed occurances of said string and displays only those.
     - The `--decorate` flag will show what commit branches are currently pointing to.
     - A path can be passed to log command as well, which will only show changes made to that specific file or files within that directory.
+    - `git log --no-merges <first-branch> <second-branch>` displays commits that exist on the second branch but not on the first branch.
 ### Undoing Things
 - If you commit files to early, and there are additional changes that you would like to include in your commit, stage those files and 
   use `git commit --amend`. The amended commit will replace the previous one.
@@ -437,3 +446,63 @@ doc/**/*.o
   - The visualizer can be stopped with `git instaweb --httpd=<web server> --stop`.
 - For setting up a more permanent GitWeb view, read [this](https://git-scm.com/book/en/v2/Git-on-the-Server-GitWeb).
 ### GitLab
+- BitNami provides virtual machine images as well as one-click installers for deploying GitLab.
+- Instructions on how to configure and use GitLab can be found [here](https://git-scm.com/book/en/v2/Git-on-the-Server-GitLab).
+
+## Distributed Git
+### Distributed Workflows
+- In Git, each developer can contribute code to other repositories and maintain their own repositories that others can build their code
+  off of - this opens up a lot of options when it comes to project workflows.
+  - *Centralized Workflow*: there is one central repository that accepts code, and developers synchronize to this hub. 
+    - This is a workflow common to other, centralized VCSs, that aren't distributed like Git is.
+  - *Integration-Manager Workflow*: each developer maintains their own fork of the repo, and has read only access to every other repo.
+    The official branch of the project has its own repo as well, which is maintained by the whoever is elected to be the maintainer. So
+    the contribution workflow is like this:
+    1. The maintainer pushes to their public repository.
+    2. Developers clone that repo and work off of it, pushing their changes to their own public copy.
+    3. When ready to merge, the developer tells the maintainer they're ready to pull changes.
+    4. The maintainer adds the developer's repository as a remote and merges locally.
+    5. The maintainer pushes these changes to the main repository.
+  - *Dictator and Lieutenants Workflow*: generally used for very, very large projects (such as the Linux kernel). It functions similar to
+    the Integration-Manager workflow, except that now there are multiple maintainers for various different aspects of the project, called
+    *lieutenants*, and one *dictator* who is responsible for merging those lieutenants' repositories into the master repo.
+### Contributing to a Project
+- How a project handles contributions varies, and there are several variables that go into deciding how changes can be made to the repo.
+  How many developers are collaboriating, what collaboration workflow is being used, how commit access is delegated, are all factors.
+- A good first step to contributing effectively is to be mindful of how commits are formatted. The official Git repo maintains the 
+  following guidelines:
+  - The first line of the commit should be be less than 50 characters long, and shouldn't end in a period. 
+  - Prefix the commit with the file or general area that the commit affects, i.e. "doc:", "githooks.txt:", etc.
+  - The remainder of the commit message should start with in the lower case, i.e. "doc: change...", "githooks.txt: clarify...".
+  - The remainder of the commit should explain what the change is trying to fix, and should:
+    1. Explain the problem the change tries to solve, i.e. what's wrong with the current code without the change.
+    2. Justify the way the change solves the problem, i.e. why the result with the change is better.
+    3. Alternate solutions that were considered but ultimately rejected.
+  - Commits should be written imperatively, i.e. "make X do Y", as if orders are being given to the codebase. 
+  - If another commit is referenced, use the format "abbreviated sha1 (subject, date)", i.e. "Commit f86a374 ("pack-bitmap.c: fix a 
+    memleak", 2015-03-30)".
+- Unlike other VSCs, if two developers clone off of the same repo, make changes to different files, and one pushes changes, the other 
+  must merge those changes into their local repository before they can push their changes to the remote; other systems like Subversion 
+  will automatically merge in situations like this where all changes made are in different files.
+- Contributing to public projects is typically different than working within a private group; since write access to the main repo will
+  probably be regulated, you will typically commit changes to a fork of that repository and push your changes there.
+- Other methods can be used, such as contributors sending the maintainers info on patches that are then manually integrated. That 
+  workflow will typically work like this:
+    1. The main repository is cloned, a branch for the contribution is made, and commits are added locally.
+    2. When the work is finished, a writable fork is created, and is added as a remote to the local repo.
+    3. The topic branch is then pushed to the fork; merging into the master branch should be avoided - in the event that the patch is
+       rejected or only parts of it are merged, you would have to rewind your master branch.
+    4. A pull request is created, either through the VCS interface or by running `git request-pull <base branch> <fork>`, where the
+       base branch is the branch of the original repository that you would like your changes to be pulled into. 
+    5. This output can then be given to the maintainers to review and possibly merge into the main repository.
+  - Rebasing comes in handy when working with this kind of workflow: for example, if the maintainer pulls in other patches to the main
+    repo while you've been working on a feature or bugfix in a branch of your fork, and your code no longer merges cleanly, you can
+    rebase your branch on top of `origin/master`, fix any conflicts, then resubmit the changes.
+  - In another scenario, a patch you've submitted requires a little more work, and because changes had been made to the main repo since
+    you forked, you want to merge those changes into your working branch before anything else. 
+      - You can create a new branch based off of the current `origin/master`, use `git merge --squash <original-branch>` to squash all 
+        the work on that branch into a single changeset, without creating a merge commit and without having multiple parents relating to
+        the next commit made.
+
+## Git Tools
+### Revision Selection
