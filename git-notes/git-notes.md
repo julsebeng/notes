@@ -37,13 +37,13 @@ Sources:
 - [Smart HTTP](#smart-http)
 - [GitWeb](#gitweb)
 - [GitLab](#gitlab)
-
 ### [Distributed Git](#distributed-git)
 - [Distributed Workflows](#distributed-workflows)
 - [Contributing to a Project](#contributing-to-a-project)
 
 ### [Git Tools](#git-tools)
 - [Revision Selection](#revision-selection)
+- [Interactive Staging](#interactive-staging)
 
 ## Getting Started
 ### Version Control
@@ -506,3 +506,58 @@ doc/**/*.o
 
 ## Git Tools
 ### Revision Selection
+#### Referencing Individual Commits
+- There are a number of ways to refer to a commit or a range of commits in Git.
+  - Via its 40-character SHA-1 hash.
+  - Via the short SHA-1 hash portion that Git will determine automatically. This is a hash that is at least four characters long and
+    still uniquely identifies a commit; the length grows as long as needed to be able to uniquely identify commits.
+    - You can type these manually, or you can have them displayed via the `--abbrev-commit` flag for `git log`.
+  - If the commit lies at a branch head, it can be identified with that branch name.
+    - The underlying SHA-1 can be revealed with `git rev-parse <branch-name>`.
+- Detailed information about a change can be displayed with `git show <commit identifier>`.
+- Git keeps track of every location your HEAD and branch references have been for an amount of time, and can be shown with `git reflog`.
+  The reflog output looks something like this:
+  ```
+  734713b HEAD@{0}: commit: fixed refs handling, added gc auto, updated
+  d921970 HEAD@{1}: merge phedders/rdocs: Merge made by the 'recursive' stategy.
+  ```
+  the `HEAD@{X}` syntax can be used with other commands, and in various ways.
+    - `git show HEAD@{2}` shows the information for the commit that `HEAD` was at two jumps ago.
+    - `git show HEAD@{yesterday}` shows where HEAD was yesterday.
+    - **reflog information is strictly local.** If a repo was cloned less than 2 months ago, a command like `git show HEAD@{2.months.ago}`
+      will just show the first local commit made.
+  - Using a `^` at the end of a reference will be interpreted as meaning "the parent of that commit." This is an *ancestry reference*.
+    - A number can be specified: `git show HEAD^2`, or the second parent of HEAD. **This is only relevant for commits that have more
+      than one parent, such as with merges**.
+    - To get a grandparent of a commit, `~` can be used instead of `^`.
+      - `HEAD^` and `HEAD~` are identical, but `HEAD~2` refers to the parent of the first parent of the commit HEAD references - the 
+        grandparent.
+        - Note that while `HEAD^2` and `HEAD~2` are not equivalent, `HEAD^^` and `HEAD~2` *are*.
+      - Both symbols can be used simultaneously - `HEAD^2~3` refers to the great-grandparent of the second parent of the commit HEAD
+        references.
+#### Referencing Commit Ranges
+- The `FirstBranch..SecondBranch` syntax asks Git to return a range of commits that are reachable from one commit but not from another.
+  - So if the first and second branch both branched off of the same common ancestor, this command will resolve to the commits that
+    were made on the second branch that are not accessible to the first.
+  - In simpler terms, `master..SomeBranch` is the list of commits in `SomeBranch` that are not in `master`.
+  - To check what commits will be pushed to a remote, for example, `git log origin/master..HEAD` can be used. 
+  - The `..` is shorthand syntax; `^` and `--not` can also be used to accomplish the same thing, which say "don't show me any reachable
+    commit from this branch."\
+    So the following commands are identical:\
+    `git log refA..refB`\
+    `git log ^refA refB`\
+    `git log refB --not refA`
+    - This can be useful when working with more than two branches; `git log ^master FirstBranch SecondBranch` will show all commits in
+      `FirstBranch` and `SecondBranch` that are not in `master`.
+- The `FirstBranch...SecondBranch` syntax specifies all the commits that are reachable by either of the two references, but not both of
+  them. Given two branches, for example, this command will display all the commits in both of them, but will filter out all of their 
+  common ancestors. 
+
+### Interactive Staging
+- For more intricate staging actions, `git add -i` can be used to start up an interactive shell
+  to make things easier. 
+- The interactive shell shows the `What now>` prompt as well as several options:
+  - The `status`, `update`, `revert`, `Add Untracked`, and `diff` commands are largely 
+    self-explanatory.
+    - `update` is for staging files and `revert` is for unstaging.
+  - `patch` allows parts of a file to be committed but not the rest.
