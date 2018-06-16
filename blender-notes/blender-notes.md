@@ -22,7 +22,7 @@
 
 | Additional View Controls ||
 |-----|-----|
-| `shift + c` | capture all objects in view |
+| `shift + c` | capture all objects in view and center 3D cursor |
 | `ctrl + alt + q` | toggle quad view |
 
 
@@ -75,7 +75,7 @@ Scaling can be finely adjusted via the Transform panel on the right side of the 
 
 ### (QR) Changing an Object's Origin
 - The Origin is the orange dot that each object has attached to it.
-- Some transformations are based on this location so it's position is important.
+- Some transformations are based on this location so its position is important.
 
 | Changing the Origin ||
 |-----|-----|
@@ -111,5 +111,50 @@ Scaling can be finely adjusted via the Transform panel on the right side of the 
 | `Object -> Snap -> Selection to 3D Cursor` | snap selection to the 3D cursor |
 
 The *3D cursor* can also be snapped to various locations in the `Object -> Snap` menu.
+
+### Creating Mesh Primitives
+| Primitive Controls ||
+|-----|-----|
+| `del` | delete currently selected object |
+| `Shift + a` | show "Add Primitive" menu |
+
+- When a primitive is created, it is positioned at the 3D cursor by default.
+- When a primitive is created, some settings can be adjusted in the Creation Menu that appears in the
+  pane to the left of the viewport.
+
+| Creation Options ||
+|-----|-----|
+| **Align to View** | align the newly created object to the current camera view |
+|  **Segments, Rings** (UV Sphere) |  adjust vertical and horizontal rings of the sphere |
+| **Subdivisions** (Ico Sphere) | adjust resolution of the spher, different than the UV sphere |
+
+### Vertice, Edge, Face Selection
+| Edit Controls ||
+|-----|-----|
+| `tab` | toggle Edit Mode |
+| `a` | select/deselect all |
+| `ctrl + tab` | select between vertex, edge, and face selection |
+| `b` | border select mode |
+| `c` | circle select mode |
+| `z` | toggle shaded/wireframe mode |
+| **Limit Selection To visible** | toggle at the bottom of the viewport to make object translucent |
+| `Ctrl + num+` | increase current selection |
+| `Ctrl + num-` | decrease current selection |
+| `Alt + RMB` | select edge loop |
+| **Shrink/Fatten** | shrinks and fattens faces |
+| **Push/Pull** | similar to Shrink/Fatten, but moves faces in and out based on their normals |
+
+### Proportional Editing
+- When working with more organic shapes, it's useful to be able to edit meshes in a way that affects
+  the adjacent mesh information.
+- Proportional Editing can be toggled via its button at the bottom of the viewport, as well as the 
+  editing mode used.
+
+| Proportional Editing ||
+|-----|-----|
+| `scroll wheel` | adjust strength of proportional editing (when translating, scaling, rotating) |
+| `PgUp, PgDown` | same effect as the scroll wheel |
+
+### Sculpt Mode
 
 ## Specifics
