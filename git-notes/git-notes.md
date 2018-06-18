@@ -96,6 +96,7 @@ Sources:
     - Cloning: to copy the entirety of an existing repo (which is normal for Git), use `git clone <url or filepath>`.
         - Optionally, a target directory can be specified, i.e. `git clone www.somerepo.com/foo local-dir`.
         - Different transfer protocols can be used, such as `https://`, `git://`, or `user@server:path/to/repo.git` (SSH).
+          The `file://` protocol can be used to clone files from a local repository.
 ### Recording Changes to the Repository
 - Files can be tracked or untracked; tracked files indicate that they were present in the last snapshot, whereas untracked were not.
 - Modified tracked files and untracked files can be viewed wth `git status` (or, in a more concise way, `git status -s`).
