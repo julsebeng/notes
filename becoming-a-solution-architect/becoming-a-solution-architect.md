@@ -273,6 +273,7 @@
   - Separate areas of concern.
   - Clearly define communication between layers, and do not expose these mechanisms to higher layers.
     - If a layer is replaced with something different, it should not impact any of the higher layers
+    - Note that system-wide layers can service multiple layers at once - they don't have to be inside of the main layer hierarchy.
   - Use abstraction to loosely couple layers - hide as many internal details as possible from other layers.
   - Don't mix different types of components in a layer, i.e. data components should not be present in the presentation layer.
   - Use a consistent data format within a layer.
@@ -280,6 +281,7 @@
   - No component should rely on the internals of another; public interfaces should be the only means of communication.
   - Do not mix roles in a single component. One component should not display itself on a GUI and also fetch its own information
     from a database, for example.
-  - Define clear contracts for components.
-  - Abstract system wide components away from other layers.
+  - Define clear contracts for components, components should have clearly defined public interfaces.
+  - Abstract system wide components away from other layers - functionality that is repeated in several components is better off
+    being contained inside its own, system-wide component that interacts with the other parts of the system.
 
