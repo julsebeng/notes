@@ -6,7 +6,13 @@
 - [Docker on Linux](#docker-on-linux)
 - [Checking a Docker Installation and Config](#checking-a-docker-installation-and-config)
 - [Managing Containers](#managing-containers)
+- [CLI Process Monitoring](#cli-process-monitoring)
+- [Getting a Shell to a Container](#getting-a-shell-to-a-container)
+- [Docker Networks](#docker-networks)
+- [Docker Images](#docker-images)
 - [Using `docker-machine`](#using-docker-machine)
+- [Miscellaneous Notes](#miscellaneous-notes)
+
 
 ---
 ### Docker Versions and Releases
@@ -129,6 +135,7 @@ copying the image, Docker instead creates a new layer of changes on top of that 
 assigned its own virtual IP inside the Docker engine's private network, and any published ports are subsequently opened.
 - By default the latest version of an image is downloaded; a version can be specified as so: `<name>:<version>`,
 i.e. `docker container run nginx:5.3.2`
+-  be downloaded but not run with `docker pull <name>`
 - By default the output of the container will appear in the foreground; the `--detach` command will run the container in the
   background, and returns its unique container ID.
     - To view the output of a detached container, use `docker container logs <name>` (old: `docker logs`)
@@ -139,7 +146,9 @@ i.e. `docker container run nginx:5.3.2`
 - A new Docker image will be assigned a random name if one isn't given with the `--name` flag.
 - `--env` can be used to pass an environment variable to a container.
 
-`docker container ls` will list all running containers.
+`docker container ls` will list all running containers. `docker image ls` will list all images available on the system. Note that
+`container ls` may list a single image multiple times, if it has been referred to by different tags - if multiple images have the
+same Image ID, they all refer to the same file on disk, and are not duplicates.
 - The old syntax is `docker ps`
 - By default this command only lists currently running containers.
     - The `-a` flag will list all containers.
@@ -148,10 +157,131 @@ i.e. `docker container run nginx:5.3.2`
 
 `docker container rm <id>` will remove a container of the specified ID; multiple space-separated IDs can be given.
 - By default, running containers cannot be deleted; the `-f` flag will override this behavior.
+- `docker container run --rm` will have a container started, then removed automatically once it's done running.
+
+### CLI Process Monitoring
+Useful commands for gathering information about a container:
+- `docker container top`: process list of the container.
+- `docker container inspect`: details of the container configuration.
+  - Provides metadata on how the container was started; doesn't provide info on the active container.
+- `docker container stats`: performance stats for all containers
+  - can use `docker container stats <name>` to get info on just a specific container.
+  - Provides realtime monitoring of performance metrics of containers.
 
 ---
+
+### Getting a Shell to a Container
+- `docker container run -it`: run a container interactively.
+  -`-i`: keeps STDIN open even if not attached to the container.
+  -`-t`: gives a sudo-TTY to the container.
+  - To start a container interactively, use `-ia` instead of `-it`.
+- `docker container exec -it`: run a command in addition to the default command a container starts with. The container must already
+  be running.
+- Can specify a command and args after the name of the image is specified when using `docker container run`
+  - E.x. `docker container run -it --name jaro nginx bash` will launch a container from the nginx image and start an interactive
+    shell.
+    - You will be root in the container, even if you're not root on the host.
+  - Note that once you exit the shell the container will **stop**.
+  - If you use `docker container ls`, you can see what command a container was started with. *A container will only live as long
+    as the command it was started with is running.*
+    - use `docker container exec` instead to run a command in addition to the command the container starts with.
+      - E.x. `docker container run -it mysql bash` will start up MySQL, *as well as* run bash. You can exit bash and the container
+        will still run.
+  - If you modify a container in some way, such as using an `apt` command to install software, it will only affect *that
+    container*, not the original image!
+
+---
+
+### Docker Networks
+
+A simple way to expose a port in a docker container is `docker container run -p`. Typically when testing and developing locally,
+Docker networking just works.
+
+- `docker container port <container>`: list exposed ports in a container.
+- When a container is started, it is connected to a particular Docker network in the background - the "bridge" network by default.
+  - Each virtual network routes through a NAT firewall on the host IP to the rest of the network/internet.
+  - All containers on the same virtual network can talk to each other, even if `-p` is not used to expose any ports.
+    - As such it's best practice to create each container with its own virtual network.
+- `docker container port <name>`: get port of the given container.
+- `docker container inspect --format '{{ .NetworkSettings.IPAddress }} <name>`: get the IP of the given container.
+
+#### How Docker Virtual Networks Work
+  - Note that, by default, the IP of the container and the IP of the host are not on the same subnet.
+    - The host machine the computer runs on will have its own NAT layer and firewall that container traffic will be routed out of.
+    - Docker also has virtual networks ("bridge" by default) which its containers attach themselves to.
+    - By default these virtual networks are attached to the host's network interface so that packets can come and go.
+    - The command `-p 80:8080` will open up port 80 on the host's network interface and forward anything coming in through the
+      virtual network to the container on port 8080.
+    - If `-p` is never specified, containers in the same virtual network can communicate with each other, but traffic cannot leave
+      this network through the host's network adapter.
+      - This is useful since you can have a web server expose its port to the host adapter, but have its backend database not do
+        so; incoming traffic can still be sent to the web server, and it can still talk to its backend if they are on the same
+        virtual network, but the database is not exposed to the outside directly.
+
+#### Managing Docker Virtual Networks
+- `docker network ls`: list Docker networks.
+  - "bridge" (or "docker0" depending on the version of Docker): the default virtual network.
+  - "host": a special network that bypasses Docker virtual networks and attaches the container directly to the host's interface.
+  - "none": removes the "eth0" interface in the container and only provides a localhost interface to it.
+- `docker network inspect`: list details on a specific network in JSON format.
+- `docker network create`: create a new virtual network.
+  - `--driver`: create a new network using a specific built-in or 3rd-party driver.
+  - `docker network create <name of interface>`: creates a new virtual network that uses the bridge driver by default.
+  - `docker container run --network <name of interface> <name>` will assign the network to a container when it's created.
+- `docker network connect` & `docker network disconnect`: create/destroy a NIC on a virtual network for a running container.
+  - `docker network connect <name of interface> <name>` to connect an already-running container to a virtual network.
+  - Note that this container will be connected to the new network **in addition to its previous networks**.
+
+#### DNS in Docker
+Since IP addresses of containers are so dynamic, you can't trust them to always be the same. Since containers are being created,
+destroyed, expanded, shrunk, etc in a large-scale environment, it's a bad idea to rely on individual IP addresses (static IPs
+should be avoided).
+- The docker daemon has a built-in DNS server that containers will use by default, *unless they are on the default bridge
+  network* - this network does not have the DNS server features.
+  - By default, Docker will use the container names as the equivalent of a hostname.
+  - `docker container exec -it <name of container> ping <name of other container>` to test connectivity between two running
+    containers in the same virtual network.
+  - Note that even though the default "bridge" network doesn't support DNS, the `--link` flag can be used when creating containers
+    in that network, which allows you to explicitly tell a container to link to another container.
+    - It's easier to just create a new virtual network.
+
+#### Implementing Round-Robin in Docker
+- Round-robin is a technique used to have multiple servers with different IPs respond to the same DNS name.
+- `--net-alias <aliased DNS name>`: flag to use when creating a container to create an alias to the given DNS name for the
+  container. **Note that this flag only works inside of a user-created virtual network.**
+  - E.x. `docker container run --net user_network --network-alias my_alias alpine`
+- `nslookup my_alias` can be used to validate that multiple containers are aliased to the same DNS record (this has to be done from
+  a container on the same network, of course).
+
+---
+
+### Docker Images
+A Docker image is a set of application binaries and dependencies, and metadata on the image data and how to run it.
+Officially, a Docker image is "an ordered collection of root filesystem changes and the corresponding execution parameters
+for use within a container runtime." A Docker image does *not* contain a complete OS - no kernel, drivers, etc.
+
+#### Image Layers
+Images are designed around the Union File System concept - changes are made in layers.
+- `docker history <image>` shows the history of changes made on a Docker image. The first layer is always the scratch layer,
+  and all subsequent layers represent changes that were made to the file system (through Docker hub updates, etc).
+- Changes to images are cached, so changes made to an image are saved, and if the same action ever needs to be done to that image,
+  Docker will just refer to the cached result.
+- If a file is changed inside of a container, the storage driver utilizes the concept of **copy-on-write**: files that are
+  changed by a container will be copied into that container. When you're looking at the file system of a container, you're actually
+  seeing layers of changes being stacked on top of each other by the storage driver, with the most recent change to each file
+  being what is actually seen in the file system.
+
+---
+
 ### Using `docker-machine`
 - `docker-machine ls` will show a list of currently installed Docker VMs.
 - `docker-machine start` will start a Docker VM.
 - `docker-machine env <name of machine>` will spit out environment variables that need to be set for a terminal to interact with
   the machine in question.
+
+---
+
+### Miscellaneous Notes
+- **Alpine Linux**: a very small, security-focused Linux distro.
+  - Its package manager is `apk`.
+  - This distro does not come installed with bash, but it does have sh.
