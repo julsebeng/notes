@@ -10,6 +10,7 @@
 - [Getting a Shell to a Container](#getting-a-shell-to-a-container)
 - [Docker Networks](#docker-networks)
 - [Docker Images](#docker-images)
+- [Extending Official Images](#extending-official-images)
 - [Using `docker-machine`](#using-docker-machine)
 - [Miscellaneous Notes](#miscellaneous-notes)
 
@@ -270,6 +271,62 @@ Images are designed around the Union File System concept - changes are made in l
   changed by a container will be copied into that container. When you're looking at the file system of a container, you're actually
   seeing layers of changes being stacked on top of each other by the storage driver, with the most recent change to each file
   being what is actually seen in the file system.
+
+#### Pushing and Tagging Images
+- `docker image pull <name>`: push changes made to a local image to a repository (Docker Hub by default).
+  - May have to use `docker login` before you can push to the Hub.
+    - **Note: logging in will automatically create an authentication key on the local machine; be sure that it's gone if you don't want
+      this machine to have access to your repositories.**
+  - Pushed repositories are public by default; if you want a private repo you should create it in Hub *first*, then upload the image.
+- `docker image tag <name of image> <name of image>:<name of tag>`: give a local image an additional tag.
+  - Note that even if an image has a different tag, if one of its layers already exists as a part of another tag, it will use that instead
+    and not upload it again.
+  - `docker image tag my_image:latest jse13/my_image:latest` to create a new tag and name for an existing image.
+
+#### Creating Docker Images
+Docker files specify how a Docker image is configured. These files (the default name is always `Dockerfile`) are composed of certain keywords, called
+stanzas.
+
+Note that each one of these stanzas will end up being its own layer inside of an image, so the order they're written in matters. The layers are also
+cached, so if the layer has been run before it won't run again if the image is built again (unless that stanza has been changed). *Every subsequent
+line after the change must be rebuilt as well*, so keep commands that change frequently near the bottom of the Dockerfile.
+- `FROM <some distribution>`: build the Docker image on top of this distribution - typically this will be Alpine.
+  - E.x. `FROM debian:jesse`
+  - These distributions are much more minimal than their proper images.
+  - Note that the current Dockerfile will inherit everything inside of the `FROM` image's Dockerfile. In this way, images can be chained together.
+- `ENV <environment variable> <value>`: set an environment variable inside of the image
+  - E.x. `ENV NGINX_VERSION 1.11.0~Jesse`
+  - Because each stanza is its own layer, if an environment variable is set subsequent commands will be able to reference it.
+- `RUN <command>`: run the specified command in the image.
+  - E.x. `RUN apt-get update`
+  - You will usually have commands that perform one well-defined task chained together so that they're saved as the same layer.
+    - E.x. `RUN apt-get update && apt-get upgrade && apt-get install vim`
+  - Since Docker expects log output to be on STDOUT and STDERR, a common stanza to see is something like
+  ```
+  RUN ln -sf /dev/stdout /var/log/nginx/acces.log \
+      && ln -sf /dev/stderr /var/log/nginx/error.log
+  ```
+- `EXPOSE <port>`: expose containers on the given ports in the virtual network that they're assigned.
+  - E.x. `EXPOSE 80 443`
+  - Note: this does not expose the images to the host's network adapter, a.k.a. it does not replace `-p` when a container is created. This
+    exposes the ports to the virtual network *only*.
+- `CMD [<name>,<flags>,<other args>]`: required stanza that describes the command that should be run when a new container is created.
+  - E.x. `CMD ["nginx","-p","daemon off;"]`
+  - Note: if there is a `CMD` present in the image sourced in `FROM`, you don't have to define your own.
+- `WORKDIR <path>`: change working directory inside of the image.
+  - `RUN cp <path>` would accomplish the same thing, but using `WORKDIR` is best practice.
+- `COPY <source in host> <target in image>`: copy files from the host machine into the image.
+
+#### Building Docker Images
+- `docker image build <file path>`: build the Dockerfile at the given location; note that if the name `Dockerfile` is not used, the `-f` flag can
+  be used to explicitly give the filename.
+    - `-t <name>`: specify a name for the image that will be created.
+      - if no tagname is given, the image will be given "latest" by default; a tag can be specified like: `-t <name>:<tagname>`
+
+---
+
+### Extending Official Images
+
 
 ---
 
