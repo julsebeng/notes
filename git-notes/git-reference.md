@@ -22,3 +22,8 @@
 * `git clone <location of repo>`: Fetch remote repository information and store it locally.
     * Transfer protocols can be `https://`, `git://`, `user@server:path/git`
     * An optional target directory can be specified: `git clone <repo> local-location`
+
+## Patching
+- `git diff-files -p <filename(s)>` will generate a patch for the specified file.
+- `git format-patch <commit> -o <output dir>` will generate a patch for each commit since `<commit`, **not including `<commit>` itself.** The patches are stored in `<output dir>`.
+- Apply a patch with `git apply <patch name>`
