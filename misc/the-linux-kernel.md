@@ -126,3 +126,166 @@
         - This is where hard disks can be found
             - Their partitions can be located inside their respective directories; ex. `sys/block/sda/sda1`,
               `sys/block/sda/sda2`
+
+~~~~~~~~~~~~~~~~~~~~~~~~~OTHER NOTES GO HERE~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~OTHER NOTES GO HERE~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~OTHER NOTES GO HERE~~~~~~~~~~~~~~~~~~~~~~~~~
+
+---
+
+## Working with Loadable Kernel Modules
+
+#### Introduction to the loadable kernel modules (LKMs)
+- Kernel modules are identified with the `.ko` extension (kernel objects)
+- LKMs contain code to run in kernel space
+- Dynamically adds functionality to a running kernel; drivers are an example of LKMs, but the concept of LKMs is a lot broader
+  than just device drivers
+- LKMs are typically written in C and compiled for a particular kernel version - it will not be compatible for other kernel
+  versions
+
+| Advantages |
+|------------|
+| Can be a relatively minimal kernel |
+| Add functionality without rebuilding or rebooting |
+| Allows for only the needed functionality to be loaded |
+| Live updates |
+| Accelerated development |
+
+| Disadvantages |
+|---------------|
+| Kernel modules shouldn't be unloaded once they're loaded |
+| Kernel modules must be built specifically for your current kernel version and kernel configuration |
+| Modules run with kernel permissions |
+
+#### Find the LKMs
+- LKMs are installed in `/lib/modules` with each installed kernel version having its own subdirectory
+    - The modules are organized in different subdirectories under the kernel version
+        - Each module needs to have its own unique name
+    - There are also config files
+
+#### Using LKM commands
+- `lsmod` lists the currently loaded modules, chronologically. There are four columns output:
+
+|||
+|---|---|
+| **Module** | name of the loaded module |
+| **Size** | size of the module, in bytes |
+| *unnamed* | module count; how many times the kernel thinks that module is in use |
+| **Used by** | shows dependencies between modules; some modules may depend on other loaded modules |
+
+- `modprobe` loads a module
+    - Loads any dependencies that the module has as well
+    - Only looks in the `/lib/modules` directory for `.ko` files
+    - Can remove modules with `modprobe -r`, which will also remove dependencies if they're no longer needed
+- `rmmod` command removes a module
+    - Kernel will prevent you from removing a module that is in use
+    - `rmmod -f` lets you forcibly remove a module, even if it's currently in use
+    - Won't remove modules that depend on the one that is being removed
+- `modinfo` retrieves module info, such as the author, its parameters, aliases, etc
+    - The "vermagic" string of a module must match the "vermagic" string of the kernel; otherwise they are
+      considered incompatible
+- `depmod` generates module config files that `modprobe` will use
+    - Creates a matrix of dependencies for modules; check the `/lib/modules/<kernel ver>/modules.dep`
+      for a list of these dependencies for all kernel modules that `depmod` creates
+    - Typically this command is run automatically when a module is installed
+- `insmod` will load modules as well, but will not load any dependencies
+    - Loads a module from a given path, so modules can be loaded from locations other than `/lib/modules`
+    - `modprobe` is the preferred way to load modules
+    - This command will not return until the loaded module's initialization function returns
+        - Function may return an error message
+
+#### Identify how LKMs work
+- Kernel modules are built using kernel makefiles
+
+```bash
+make -C /lib/modules/$(uname -r)/build M=$PWD modules
+# -C tells make to use the kernel makefile in our kernel's directory
+# M= is a macro used by the kernel makefile that points to the modules to build
+# make target is "modules"
+```
+
+- The kernel makefile will look for a makefile in this directory for the module it's going to be building
+    - This makefile must have commands assigned to the special target `obj-m`
+
+```makefile
+// Given a directory that contains the mod.c source file, the makefile should look something like:
+obj-m := mod.o
+```
+
+This will make `mod.c -> mod.o -> mod.ko`.
+
+- Kernel module code has certain unique features:
+```c
+//These are includes from the kernel source tree, and are different than the ones that would be made inside
+//  of userspace code.
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/sched.h>
+
+int my_init( void )
+{
+    printk( "foo\n" );
+    //... do something
+    return 0;
+}
+
+void my_cleanup( void )
+{
+    //... do something
+}
+
+// Register the init and exit functions that we created using special macros
+module_init( my_init );
+module_exit( my_cleanup );
+```
+
+---
+
+## Examining Linux Kernel Source
+
+#### Get the kernel source
+- May have to pull the source via a package manager ( `yumdownloader -source kernel` ), via Git, etc
+    - The official kernel can be found at [www.kernel.org](kernel.org)
+    - If an RPM is downloaded, it can be installed via these steps:
+        1. `rpm -i kernel*.rpm` should create an `rpmbuild` in the home directory
+        2. `cd ~/rpmbuild/SPECS` to get `kernel.spec` file, which contains directions on building the RPM
+        3. `rpmbuild -bp kernel.spec`
+            - `-bp` stands for "build prep" and will prepare to build the kernel itself, extracting the tarball
+              and applying any patches if necessary
+        4. `cd ~/rpmbuild/BUILD` to find the source code
+        5. Use the kernel Makefile located here to perform whatever operation you like
+            - There should be a kernel Makefile in this directory; use `make help` to see what options there are
+            - There should be options like `make menuconfig` or `make xconfig` that provide a graphiv interface
+              for selecting what kernel options you'd like to have
+              - Configuration parameters are stored in `.config`
+            - Other options typically include:
+                - `make bzImage` to create a bootable kernel in the bz image format (the common format for
+                  x86 and x86_64 architectures)
+                - `make modules` will compile the modules
+                - `make install_modules` will install modules in the `/lib/modules` directory
+                - `make install` will install the kernel
+                - `make clean` will remove object files
+
+#### Explore the kernel Makefile
+- The beginning of the kernel Makefile contains version information that looks something like:
+```
+VERSION = 3
+PATCHLEVEL = 10
+SUBLEVEL = 0
+EXTRAVERSION =
+NAME = Some Name
+```
+
+These fields shouldn't be modified, with the exception of EXTRAVERSION that can be used if you want to build
+your own kernel without overwriting an existing version
+- Other Makefile targets:
+    - `make mrproper` cleans even more than `make clean`
+        - Removes generated files, config files, and backup files
+    - `make distclean` is the most rigorous cleaning command
+        - Does everything `mrproper` does, as well as removes editor backup and patch files
+    - `make xconfig` provides a QT-based frontend for configuring kernel options
+    - `make gconfig` provides a GTK-based frontend for configuring kernel options
+    - `make menuconfig` is a TUI-based frontend for configuring kernel options, useful if there is no window
+      server running
+    - `make config` is a CMD-based frontend for configuring kernel options
+        - Prompts for input for almost every single kernel option available, which number in the thousands
