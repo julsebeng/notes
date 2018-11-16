@@ -10,7 +10,9 @@
 - [Getting a Shell to a Container](#getting-a-shell-to-a-container)
 - [Docker Networks](#docker-networks)
 - [Docker Images](#docker-images)
-- [Extending Official Images](#extending-official-images)
+- [Persistent Data](#persistent-data)
+- [Docker Compose](#docker-compose)
+- [Using Swarm](#using-swarm)
 - [Using `docker-machine`](#using-docker-machine)
 - [Miscellaneous Notes](#miscellaneous-notes)
 
@@ -303,7 +305,7 @@ line after the change must be rebuilt as well*, so keep commands that change fre
     - E.x. `RUN apt-get update && apt-get upgrade && apt-get install vim`
   - Since Docker expects log output to be on STDOUT and STDERR, a common stanza to see is something like
   ```
-  RUN ln -sf /dev/stdout /var/log/nginx/acces.log \
+  RUN ln -sf /dev/stdout /var/log/nginx/access.log \
       && ln -sf /dev/stderr /var/log/nginx/error.log
   ```
 - `EXPOSE <port>`: expose containers on the given ports in the virtual network that they're assigned.
@@ -316,6 +318,8 @@ line after the change must be rebuilt as well*, so keep commands that change fre
 - `WORKDIR <path>`: change working directory inside of the image.
   - `RUN cp <path>` would accomplish the same thing, but using `WORKDIR` is best practice.
 - `COPY <source in host> <target in image>`: copy files from the host machine into the image.
+- `ARG var=value`: specify a build argument that can be passed in via command-line, that defaults to `value`.
+    - This can be used in following stanzas as `${var}`.
 
 #### Building Docker Images
 - `docker image build <file path>`: build the Dockerfile at the given location; note that if the name `Dockerfile` is not used, the `-f` flag can
@@ -323,10 +327,154 @@ line after the change must be rebuilt as well*, so keep commands that change fre
     - `-t <name>`: specify a name for the image that will be created.
       - if no tagname is given, the image will be given "latest" by default; a tag can be specified like: `-t <name>:<tagname>`
 
+#### Extending Official Images
+- To extend existing images, you can use `FROM <some image>` to base your changes off of some existing image, allowing you to
+  extend its functionality to meet your needs.
+    - Required stanzas, like `CMD`, will be inherited from the base container, so its not necessary to provide these in the new  
+      configuration.
+
 ---
 
-### Extending Official Images
+### Persistent Data
+- "immutable infrastructure": once a container is running, it shouldn't change; changes must be redeployed.
+    - Good design choice, but what about persistent data? Unique data, such as databases, need to persist even as containers
+      are updated and redeployed.
+    - The Docker solution is the "separation of concerns"; persistent data should be completely separated from the application
+      binaries.
+- Containers that are created and changed will remain changed when stopped, but the images they're based on do not change with
+  them.
+- Docker uses **volumes** and **bind mounts** to solve this problem.
+    - Volumes: configuration option for a container that creates a special location outside of the container UFS to store
+      persistent data; this is transparent to the container.
+    - Bind Mounts: links a container path to a host path.
 
+#### Data Volumes
+##### Creation
+- Volumes can be created a couple ways.
+    - `VOLUME <path>` stanza in a Dockerfile.
+        - This creates a new volume and assigns it to `<path>`.
+    - Specifying on run with the `-v`.
+        - `-v /path/inside/container` will create an unnamed volume mounted at the path given.
+        - `-v my_volume:/path/inside/container` will create a named volume mounted at the path given; this makes it more
+          identifiable when listing existing volumes on the host, when inspecting mount information, etc.
+    - `docker volume create`
+        - This is the only way to create a volume with customizable driver options.
+
+##### Interacting with Volumes
+- `docker image inspect` will reveal any images attached to a container.
+    - Under the "Volumes" object.
+    - If a container is running, `docker container inspect <name>` will have a "Mounts" object that describes the host path
+      that is mapped to the volume path inside the container.
+        - Note that for MacOS and Windows, because this host directory is technically stored inside of a Linux VM, it isn't
+          accessible from the host.
+- Volumes have to be removed manually.
+    - `docker volume prune` will delete unused volumes.
+- `docker volume ls` will list existing volumes.
+    - This will list all volumes; there is no `-a` flag.
+    - `docker volume inspect <name>` will reveal more information about a volume.
+
+#### Bind Mounting
+- Maps a host directory into a container directory.
+- Skips the UFS, just like volumes.
+- Mounts over any data inside the container, just like traditional mount points.
+    - Unmounting will uncover the overridden path and files.
+- Binds can't be specified in Dockerfiles, they must be asserted when a container is run.
+- Syntactically, bind mounts are similar to volumes:
+```bash
+  ... run -v /path/on/host:/path/container    # Linux and MacOS
+  ... run -v //c/path/on/host:/path/container # Windows
+
+  ... run -v $(pwd):/path/container # a helpful shortcut!
+```
+
+---
+
+### Docker Compose
+- Docker Compose is a command-line tool as well as a configuration file format.
+- Docker Compose allows the configuration of containers and their relationships to be defined and executed as one command.
+    - Configuration files are written in YAML that specify containers, networks, volumes, etc needed.
+    - `docker-compose` is used for local development and testing.
+
+#### Docker Compose Files
+- Compose files can be used locally with `docker-compose` or with `docker` directly in production with Swarm (as of v1.13).
+- The Compose YAML format has its own versions.
+    - The version must be specified, else version 1 will be assumed.
+
+Compose configurations have several sections.
+```yaml
+version: '3.1'                     # defaults to 1 unless explicitly specified; v2 is a recommended minimum.
+services:                          # containers, equates to docker run commands
+    jekyll:                        # a friendly name, this is also the DNS name inside the virtual network
+        image: jengel/jekyll-serve # optional if you use build:
+        command: ...               # optional, replaces the default CMD specified by the image
+        environment:               # optional, equates to -e in docker run
+            SOME_ENV_VAR: example  # note that env vars don't use the list format like the volumes and ports sections
+        volumes:                   # optional, equates to -v in docker run
+            - .:/site              # compose understands the "." shortcut
+        ports:                     # optional, equates to -p in docker run
+            - '80:4000'
+        depends-on:                # defines what containers this container relies on
+    servicename2:                  # other containers to configure...
+
+volumes: ...                       # optional, equates to docker volume create
+networks: ...                      # optional, equates to docker network create
+```
+
+#### The Docker Compose Command Line
+- Compose is a separate tool from Docker
+    - Comes bundled with Docker on MacOS and Windows, but is a separate download on Linux
+- Compose is not designed for production, but moreso to make development and testing easier to set up.
+- `docker-compose up`: set up volumes/networks and spin up all containers.
+- `docker-compose down`: stop and remove all containers, and remove volumes and networks.
+- `docker-compose -d`: set up in the background.
+- `docker-compose logs`: show logs; these are the same logs that get output with `docker-compose up`, but if Compose was run
+  detached this will allow you to view those logs again.
+- `docker-compose ps`: shows currently running containers
+- `docker-compose top`: shows running processes in each container
+- `docker-compose --help`
+
+#### Adding Image Building to Compose Files
+- Compose can also build custom images.
+    - If they are cached, Compose will use those versions of the images.
+    - Can be forcibly rebuilt with `docker-compose build`
+- Built images are not removed when `docker-compose down` is run.
+    - Can use `docker-compose -rmi local` to remove images created as well. Note that "local" will not remove any images
+      that have a custom tag set by the `image:` field, such as in the below example.
+
+Building images has its own set of YAML key-values.
+```yaml
+services: ...
+    mycontainer:
+        build:
+            context: .                        # builds in current directory
+            dockerfile: CurrentDir.Dockerfile # Dockerfile to build from
+        image: newcontainer                   # name of the container once its built; looked for in cache before building
+        # image is optional; Compose will generate a name for it if it's not given.
+        # If image is given, the built container will not be removed by docker-container down -rmi local
+```
+
+---
+
+### Using Swarm
+- Scalability and container lifecycle management is important when deploying a lot of containers.
+- Docker aims to solve:
+    - Container lifecycle
+    - Scaling out/in/up/down
+    - Automatic respawning of failed containers
+    - Replacing containers with zero downtime (blue/green deploy)
+    - Controlling/tracking when containers get started
+    - Creating cross-node virtual networks
+    - Ensuring only trusted servers are running containers
+    - Securely storing secrets, keys, passwords, etc, and transporting them securely and exclusively to the right container
+- Swarm features are disabled by default; run `docker swarm init` to enable Swarm features.
+    - This command performs a lot of PKI (public key infrastructure) and security automation.
+        - Root Signing Certificate created for the swarm that's used to establish trust and sign certs for all nodes and managers.
+        - Certificate is issued to the first Manager node.
+        - Join tokens are created for other nodes to be able to join this swarm.
+        - Enables the Swarm API and creates a Raft database to store root CA, configs, and secrets.
+            - Encrypted by default on disk (1.13+).
+            - No need for another key/value system to hold orchestration/secrets.
+            Replicates logs amongst managers via mutual TLS in "control plane".
 
 ---
 
