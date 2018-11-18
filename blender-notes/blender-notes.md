@@ -156,5 +156,15 @@ The *3D cursor* can also be snapped to various locations in the `Object -> Snap`
 | `PgUp, PgDown` | same effect as the scroll wheel |
 
 ### Sculpt Mode
+- Sculpt mode is a mode like Edit Mode and can be accessed via the drop-down at the bottom of the viewport.
+- Options can be found in the pane left of the viewport.
+
+| Sculpting Brush Options ||
+|-----|-----|
+| `f` | hold down to adjust feathering |
+| **Symmetry Lock** | allows edits to be mirrored across different axes |
+| Brush->Sculpt Tool | menu to change the sculpting tool used |
+
+
 
 ## Specifics

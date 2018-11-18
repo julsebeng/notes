@@ -127,10 +127,79 @@
             - Their partitions can be located inside their respective directories; ex. `sys/block/sda/sda1`,
               `sys/block/sda/sda2`
 
-~~~~~~~~~~~~~~~~~~~~~~~~~OTHER NOTES GO HERE~~~~~~~~~~~~~~~~~~~~~~~~~
-~~~~~~~~~~~~~~~~~~~~~~~~~OTHER NOTES GO HERE~~~~~~~~~~~~~~~~~~~~~~~~~
-~~~~~~~~~~~~~~~~~~~~~~~~~OTHER NOTES GO HERE~~~~~~~~~~~~~~~~~~~~~~~~~
+---
 
+## Booting
+
+### Understanding Grub
+bash: `|&` will pipe stdout and stderr; normally only stdout is piped.
+
+`proc/partitions` reveals information about the current system partitions.
+
+- Executes after the Power On Self Test (POST) and before the BIOS.
+- Grub needs to be installed in a particular location on the disk
+- Grub loads the kernel, initial root file system, sets up the kernel command line, then
+  transfers control to the kernel.
+    - Grub calls the kernel via a command-line and passes in some arguments; these arguments
+      can be changed before the kernel is booted to modify its behavior.
+- Grub loads the kernel and initial filesystem from the disk and therefore needs to understand
+  how the disk is laid out.
+  - Must be built with support for certain file systems.
+
+#### Configuring Grub
+- There have been two versions of Grub.
+  - Grub 1: had a config file, `grub.conf`, to add, remove, or modify kernel boot choices.
+  - Grub 2: more sophisticated and powerful;
+    - `/etc/default/grub` contains the first part of the Grub configuration, for things like the default
+      kernel to boot, or the timeout window for the Grub menu.
+    - `/etc/grub.d` is a directory where parameters can be changed, such as adding new entries to Grub.
+      - The files here look like `40_custom`: the number indicates the ordering of the options.
+        - Normally you will modify `40_custom` when you add a new entry.
+    - After files are edited, run `grub2-mkconfig` to apply the changes.
+- Interrupting Grub at startup allows you to interactively and temporarily modify boot arguments for
+  the boot options.
+
+#### Kernel command-line parameters
+- When Grub calls the kernel, it will pass in any arguments specified to it.
+  - The kernel will ignore any unrecognized commands.
+- `dmesg` or `/proc/cmdline` can be used to see what arguments were used to call the currently running
+  kernel.
+  - The kernel source should also contain a `Documentation/kernel-parameters.txt` file that documents
+    the available kernel parameters.
+    - There are about 500 commands here
+    - Many of the handlers for command-line arguments are defined with the `__setup()` macro in the source,
+      so this can be a good way to find exactly what a certain command-line argument is doing.
+
+#### Configure run levels and targets
+- Typically part of the Linux kernel loading process involves mounting a filesystem of some kind to RAM.
+  - The filesystem that contains "/" will be the root filesystem.
+  - The initial RAM disk or RAM filesystem is used to provide support and drivers for mounting the system's
+    real root filesystem.
+    - RAM disk (`initrd`) is a file that is formatted like a filesystem, and is not commonly used today.
+    - RAM filesystem (`initramfs`) is an actual filesystem that exists in RAM, as opposed to a formatted file on the disk,
+      and can grow and shrink.
+      - Inside this image is the process that the kernel will execute first, typically `init`.
+        - `init` then typically loads kernel modules needed to access the filesystems proper.
+        - After the real filesystem is mounted, `init` is killed and then spun up again, this time from inside the
+          real filesystem.
+          - `init` in reality may be a link to `systemd`.
+          - This `init` is responsible for setting up things like daemons within the operating system.
+            - These are defined in `/etc/systemd/system`
+            - In older systems, these services were controlled by run level scripts - depending on what run level
+              a system was booted in, a different set of services were executed, typically defined in `/etc/rc.d`.
+            - Note that these are user-space services, not kernel-space.
+
+#### Debug `initramfs` images
+- There exists an `initrd`/`initramfs` for each kernel, usually in `/boot`.
+  - `initrd` files are a gzipped filesystem image (i.e. commonly `.ex2`) that is uncompressed then mounted into RAM.
+  - `initramfs` files are a gzipped CPIO archive that is unzipped into RAM and mounted by the kernel.
+- `initramfs` and `initrd` files can be modified by unzipping them and unarchiving them
+  - **Be very careful when doing this, and be sure to use `--no-absolute-filenames` when unarchiving with CPIO.**
+    - Otherwise it will start extracting at "/" and overwrite parts of your system.
+- Typically there is an `init` program inside of this archive, as well as other things.
+- Specifying alternate programs instead of `init` inside the bootloader:
+  - `rdinit=/bin/bash` will start a shell in the `initramfs`
+  - `init=/bin/bash` will finish with the `initramfs` and start a shell inside of the mounted real filesystem
 ---
 
 ## Working with Loadable Kernel Modules
