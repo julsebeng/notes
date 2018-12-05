@@ -213,4 +213,6 @@ Despite being imaginary, many magnetic phenomena can be explained by assuming th
 
 The space around a magnet in which the magnetic force acts is called a **magnetic field**. The entire quantity of
 magnetic lines surrounding a magnet is called **magnetic flux**. Flux in a magnetic circuit corresponds to current
-in an electric circuit.
+in an electric circuit:
+
+![Equation for magnetic flux](https://github.com/jse13/notes/blob/home-branch/basic_electricity/images/FluxDensity.gif?raw=true "Equation for Magnetic Flux")
