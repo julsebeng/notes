@@ -202,17 +202,28 @@ If a bar magnet is dipped into iron filings, the filings will be attracted to th
   from its north pole, outwards and around to the south pole.
 
 Despite being imaginary, many magnetic phenomena can be explained by assuming these lines have real-life properties.
-    1. Magnetic lines of force are continuous and will always form closed loops.
-    2. Magnetic lines of force will never cross one another.
-    3. Parallel magnetic lines of force traveling in opposite directions will repel one another.
-        - Lines traveling in the same direction tend to unite with each other and form into single lines
-          traveling in a direction determined by the magnetic poles creating the lines of force.
-    4. Magnetic lines of force tend to shorten themselves.
-        - Thus, the magnetic lines of force existing between two unlike poles cause the poles to be pulled together.
-    5. Magnetic lines of force pass through all materials, both magnetic and nonmagnetic.
+1. Magnetic lines of force are continuous and will always form closed loops.
+2. Magnetic lines of force will never cross one another.
+3. Parallel magnetic lines of force traveling in opposite directions will repel one another.
+    - Lines traveling in the same direction tend to unite with each other and form into single lines
+        traveling in a direction determined by the magnetic poles creating the lines of force.
+4. Magnetic lines of force tend to shorten themselves.
+    - Thus, the magnetic lines of force existing between two unlike poles cause the poles to be pulled together.
+5. Magnetic lines of force pass through all materials, both magnetic and nonmagnetic.
 
 The space around a magnet in which the magnetic force acts is called a **magnetic field**. The entire quantity of
 magnetic lines surrounding a magnet is called **magnetic flux**. Flux in a magnetic circuit corresponds to current
 in an electric circuit:
 
 ![Equation for magnetic flux](https://github.com/jse13/notes/blob/home-branch/basic_electricity/images/FluxDensity.gif?raw=true "Equation for Magnetic Flux")
+
+Where *B* is the flux density, *phi* is the total number of lines of flux, and *A* is the cross-sectional area of the
+magnetic circuit.
+- If A is in square centimeters, B is in lines ber square centimeter, or **gauss.**
+- Note that **flux, or flow, does not describe a stream of particles in motion, but simply a field of force exerted in
+  space.**
+
+The magnetic field surrounding a magnet is always symmetrical, unless disturbed by another magnetic substance.
+- The lines of force also have direction and are represented as emanating from the north pole and entering the south.
+
+### Laws of Attraction and Repulsion
