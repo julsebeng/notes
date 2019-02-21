@@ -1,6 +1,9 @@
 ### [Git Config](#git-config)
 ### [Git Help](#git-help)
 ### [Cloning](#cloning)
+### [Patching](#patching)
+### [Sausage-making](#sausage-making)
+### [Misc](#misc)
 
 ---
 
@@ -52,3 +55,9 @@
         - Changing `pick` to `fixup` will combine the commit with the one above it, but will not prompt you to change
           the commit message.
         - changing `pick` to `reword` allows you to edit the commit message for that commit.
+
+## Misc
+#### Other useful shortcuts and tools
+
+- `git checkout -` will checkout the last branch that you were on.
+	- This is short for `git checkout @{-1}`; this can also be used anywhere you would name a branch, ex. `git merge @{-1}`
