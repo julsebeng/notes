@@ -55,6 +55,11 @@
         - Changing `pick` to `fixup` will combine the commit with the one above it, but will not prompt you to change
           the commit message.
         - changing `pick` to `reword` allows you to edit the commit message for that commit.
+- To replay **all** commits on the working branch to the proper feature branch:
+```
+git checkout <proper feature branch>
+git rebase <working branch>
+```
 
 ## Misc
 #### Other useful shortcuts and tools
