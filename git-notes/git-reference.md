@@ -61,6 +61,19 @@ git checkout <proper feature branch>
 git rebase <working branch>
 ```
 
+## Pruning
+- To remove unused artifacts (including local branches) that are no longer needed, use `git prune`
+- To remove local branches that no longer have a related upstream branch, use `git remote prune origin`
+
+## Worktrees
+Worktrees are essentially branches that exist as filesystem objects; instead of using `git checkout <branch>` you would
+instead `cd <dir containing worktree>`.
+- `git worktree add path/to/dir --checkout <branch name>` to create a dir of an existing branch.
+	- Can use `-b` to create a new branch in a directory.
+- `git worktree remove` to remove a worktree; this command doesn't exist in some versions of Git for some reason.
+	- An alternative workflow is using `rm` to remove the directory, then using `git worktree prune` to fully remove the
+	  worktree.
+
 ## Misc
 #### Other useful shortcuts and tools
 
