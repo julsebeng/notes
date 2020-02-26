@@ -3,8 +3,8 @@
 ### [Cloning](#cloning)
 ### [Patching](#patching)
 ### [Sausage-making](#sausage-making)
-### [Pruning](#sausage-making)
-### [Worktrees](#sausage-making)
+### [Pruning](#pruning)
+### [Worktrees](#worktrees)
 ### [Misc](#misc)
 
 ---
