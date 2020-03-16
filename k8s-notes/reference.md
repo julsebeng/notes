@@ -101,7 +101,48 @@ There are a couple different types of Services:
 - *Load Balancer*: exposes application to the internet with load balancing; only available when using Kubernetes in a cloud
   environment backed by a cloud provider.
 
-# Deployments, Jobs, and Services
+# Labels, Selectors, and Namespaces
+## Labels
+Labels are key-value pairs attached to objects like pods, services, and deployments. These are used by Kubernetes users
+to identify attributes for objects and don't affect how Kubernetes runs.
+- Labels can be added, removed, or changed at any time.
+- Label keys are unique per object.
+
+Examples of labels:
+
+|                        |                        |
+|------------------------|------------------------|
+| `"release" : "stable"` | `"release" : "canary"` |
+|                        |                        |
+
+|                          |                        |                                |
+|--------------------------|------------------------|--------------------------------|
+| `"environment" : "dev" ` | `"environment" : "qa"` | `"environment" : "production"` |
+|                          |                        |                                |
+
+|                       |                      |                    |
+|-----------------------|----------------------|--------------------|
+| `"tier" : "frontend"` | `"tier" : "backend"` | `"tier" : "cache"` |
+|                       |                      |                    |
+
+## Selectors
+Selectors work in conjunction with Labels to filter out a specific set of objects.
+
+There are two kinds of Selectors:
+- *Equality-based*: filters Labels based on equality or inequality of either keys or values.
+- *Set-based*: filters based on certain operators.
+  - `IN`: matches a value out of a set of defined values.
+  - `NOTIN`: matches a value outside of a set of defined values.
+  - `EXISTS`: checks to see if a given label exists.
+
+Selectors can be used through `kubectl`.
+
+## Namespaces
+Namespaces allow for multiple virtual clusters to be backed by the same physical cluster.
+- Namespaces are useful in large enterprises where there are multiple users and teams that require access to resources, but
+  only to resources that they have ownership of.
+- Namespaces can also be used to divide cluster resources between users, via *resource quotas.*
+- Namespaces provide scoping for names - names can be identical so long as they're in different namespaces.
 
 # Miscellaneous
 
