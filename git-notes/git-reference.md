@@ -1,15 +1,4 @@
-### [Git Config](#git-config)
-### [Git Help](#git-help)
-### [Cloning](#cloning)
-### [Patching](#patching)
-### [Sausage-making](#sausage-making)
-### [Pruning](#pruning)
-### [Worktrees](#worktrees)
-### [Misc](#misc)
-
----
-
-## Git Config
+# Git Config
 * `git config --global user.name "name"`: Set name that is put on commit messages for every repo 
   on the current user profile.
 * `git config --global user.email "email"`: Set email that is put on commit messages for every repo 
@@ -19,16 +8,16 @@
 * Global configurations can be overridden on a per-repo basis by re-running these commands in that
   repo, sans `--global` flag.
 
-## Git Help
+# Git Help
 * `git help <command>`: Provide in-depth manual page for the specified command.
 * `git <command> -h`: Provide concise useage instructions for the specified command.
 
-## Cloning
+# Cloning
 * `git clone <location of repo>`: Fetch remote repository information and store it locally.
     * Transfer protocols can be `https://`, `git://`, `user@server:path/git`
     * An optional target directory can be specified: `git clone <repo> local-location`
 
-## Patching
+# Patching
 - `git diff-files -p <filename(s)>` will generate a patch for the specified file.
 - `git format-patch <commit> -o <output dir>` will generate a patch for each commit since `<commit`, **not including `<commit>` itself.** The patches are stored in `<output dir>`.
 - Apply a patch with `git apply <patch name>`
@@ -36,7 +25,7 @@
   with `patch -p1 < diff_file`
     - Note that this method doesn't preserve any of the commit history, use with discretion.
 
-## Sausage-making
+# Sausage-making
 - If you don't want your life to be hell, cleaning up your git history should be done on a local only branch; rewriting
   remote history sucks and is a bad idea regardless.
     - Leverage branching when working on bugs/features, i.e branch off of `development` with `feature-branch`, then branch
@@ -63,11 +52,14 @@ git checkout <proper feature branch>
 git rebase <working branch>
 ```
 
-## Pruning
+# Pruning
 - To remove unused artifacts (including local branches) that are no longer needed, use `git prune`
 - To remove local branches that no longer have a related upstream branch, use `git remote prune origin`
 
-## Worktrees
+# Removing Branches
+- To remove a _local_ branch, use `git branch -d <branch>`
+- To remove a _remote_ branch, use `git push <remote> --delete <branch>`
+# Worktrees
 Worktrees are essentially branches that exist as filesystem objects; instead of using `git checkout <branch>` you would
 instead `cd <dir containing worktree>`.
 - `git worktree add path/to/dir --checkout <branch name>` to create a dir of an existing branch.
@@ -76,7 +68,7 @@ instead `cd <dir containing worktree>`.
 	- An alternative workflow is using `rm` to remove the directory, then using `git worktree prune` to fully remove the
 	  worktree.
 
-## Misc
+# Misc
 #### Other useful shortcuts and tools
 
 - `git checkout -` will checkout the last branch that you were on.
