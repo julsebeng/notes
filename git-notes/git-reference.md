@@ -73,3 +73,5 @@ instead `cd <dir containing worktree>`.
 
 - `git checkout -` will checkout the last branch that you were on.
 	- This is short for `git checkout @{-1}`; this can also be used anywhere you would name a branch, ex. `git merge @{-1}`
+
+- `git ls-files --error-unmatch <filename>` will check to see if a certain file is part of the files versioned by Git.
