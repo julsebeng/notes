@@ -59,6 +59,7 @@ git rebase <working branch>
 # Removing Branches
 - To remove a _local_ branch, use `git branch -d <branch>`
 - To remove a _remote_ branch, use `git push <remote> --delete <branch>`
+
 # Worktrees
 Worktrees are essentially branches that exist as filesystem objects; instead of using `git checkout <branch>` you would
 instead `cd <dir containing worktree>`.
@@ -71,6 +72,7 @@ instead `cd <dir containing worktree>`.
 # Stashes
 - To show a diff of the most recent stash, use `git stash show -p`
   - To show a diff of a specific stash, use `git stash show -p <stash index>` or `git stash show -p stash@{<stash index>}`
+  - Note that this output can be redirected to a text file (`git stash show -p > patch.txt`) and used as a patch.
 
 # Misc
 #### Other useful shortcuts and tools
