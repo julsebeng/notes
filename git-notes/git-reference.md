@@ -68,6 +68,10 @@ instead `cd <dir containing worktree>`.
 	- An alternative workflow is using `rm` to remove the directory, then using `git worktree prune` to fully remove the
 	  worktree.
 
+# Stashes
+- To show a diff of the most recent stash, use `git stash show -p`
+  - To show a diff of a specific stash, use `git stash show -p <stash index>` or `git stash show -p stash@{<stash index>}`
+
 # Misc
 #### Other useful shortcuts and tools
 
